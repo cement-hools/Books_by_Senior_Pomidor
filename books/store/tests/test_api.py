@@ -6,9 +6,8 @@ from rest_framework import status
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APITestCase
 
-from store.models import Book
+from store.models import Book, UserBookRelation
 from store.serializers import BookSerializer
-
 
 
 class BooksApiTestCase(APITestCase):
@@ -112,23 +111,6 @@ class BooksApiTestCase(APITestCase):
         self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
         self.assertEqual(575, self.book_1.price)
 
-    def test_update_put(self):
-        """Обновить цену"""
-        url = reverse('book-detail', args=(self.book_1.id,))
-        data = {
-            "name": self.book_1.name,
-            "price": 575,
-            "author_name": self.book_1.author_name,
-        }
-        json_data = json.dumps(data)  # переводим словарь в json
-        self.client.force_login(self.user)
-        response = self.client.put(url, data=json_data,
-                                   content_type='application/json')
-
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
-        self.assertEqual(575, self.book_1.price)
-
     def test_update_put_not_owner(self):
         """Не автор пытается обновить поля книги"""
         self.user2 = User.objects.create(username='test_username2')
@@ -211,3 +193,81 @@ class BooksApiTestCase(APITestCase):
             code='permission_denied')}
         self.assertEqual(error, response.data)
         self.assertEqual(3, Book.objects.all().count())
+
+
+class BooksRelationTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create(username='test_username')
+        self.user2 = User.objects.create(username='test_username2')
+        self.book_1 = Book.objects.create(name='test book 1', price=25,
+                                          author_name='Author 1',
+                                          owner=self.user)
+        self.book_2 = Book.objects.create(name='test book 2', price=55,
+                                          author_name='Author 5')
+        self.book_3 = Book.objects.create(name='test book Author 1', price=55,
+                                          author_name='Author 3')
+
+    def test_like(self):
+        """Авторизованный пользователь ставит like книге
+        и добавляет в закладки"""
+        url = reverse('userbookrelation-detail', args=(self.book_1.id,))
+
+        data = {
+            "like": True,
+        }
+        json_data = json.dumps(data)
+        self.client.force_login(self.user)
+        response = self.client.patch(url, data=json_data,
+                                     content_type='application/json')
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        relation = UserBookRelation.objects.get(user=self.user,
+                                                book=self.book_1)
+        self.assertTrue(relation.like)
+
+        data = {
+            "in_bookmarks": True,
+        }
+        json_data = json.dumps(data)
+        response = self.client.patch(url, data=json_data,
+                                     content_type='application/json')
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        relation = UserBookRelation.objects.get(user=self.user,
+                                                book=self.book_1)
+        self.assertTrue(relation.in_bookmarks)
+
+    def test_rate(self):
+        """Авторизованный пользователь ставит рейтинг книге"""
+        url = reverse('userbookrelation-detail', args=(self.book_1.id,))
+
+        data = {
+            "rate": 3,
+        }
+        json_data = json.dumps(data)
+        self.client.force_login(self.user)
+        response = self.client.patch(url, data=json_data,
+                                     content_type='application/json')
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        relation = UserBookRelation.objects.get(user=self.user,
+                                                book=self.book_1)
+        self.assertEqual(3, relation.rate)
+
+    def test_rate_wrong(self):
+        """Авторизованный пользователь ставит неверный рейтинг книге"""
+        url = reverse('userbookrelation-detail', args=(self.book_1.id,))
+
+        data = {
+            "rate": 7,
+        }
+        json_data = json.dumps(data)
+        self.client.force_login(self.user)
+        response = self.client.patch(url, data=json_data,
+                                     content_type='application/json')
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code,
+                         response.data)
+        relation = UserBookRelation.objects.get(user=self.user,
+                                                book=self.book_1)
+        self.assertEqual(None, relation.rate)

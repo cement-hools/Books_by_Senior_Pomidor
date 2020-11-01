@@ -30,6 +30,11 @@ class UserBooksRelationView(mixins.UpdateModelMixin, GenericViewSet):
     serializer_class = UserBookRelationSerializer
     lookup_field = 'book'
 
+    def get_object(self):
+        obj, _ = UserBookRelation.objects.get_or_create(user=self.request.user,
+                                                        book_id=self.kwargs['book'])
+        return obj
+
 
 
 def auth(request):
