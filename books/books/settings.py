@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'social_django',
+    'django_filters',
     'rest_framework',
     'store',
 ]
@@ -131,13 +132,16 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-    ),
-    'DEFAULT_PARSER_CLASSES': (
-        'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.MultiPartParser',
-    )
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+    # 'DEFAULT_RENDERER_CLASSES': (
+    #     'rest_framework.renderers.JSONRenderer',
+    # ),
+    # 'DEFAULT_PARSER_CLASSES': (
+    #     'rest_framework.parsers.JSONParser',
+    #     'rest_framework.parsers.MultiPartParser',
+    # )
 }
 
 #SOCIAL_AUTH_POSTGRES_JSONFIELD = True
