@@ -3,17 +3,20 @@ import json
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APITestCase
 
 from store.models import Book
 from store.serializers import BookSerializer
 
 
+
 class BooksApiTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create(username='test_username')
         self.book_1 = Book.objects.create(name='test book 1', price=25,
-                                          author_name='Author 1')
+                                          author_name='Author 1',
+                                          owner=self.user)
         self.book_2 = Book.objects.create(name='test book 2', price=55,
                                           author_name='Author 5')
         self.book_3 = Book.objects.create(name='test book Author 1', price=55,
@@ -106,7 +109,64 @@ class BooksApiTestCase(APITestCase):
                                    content_type='application/json')
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.book_1.refresh_from_db() # замена Book.objects.get(id=self.book_1.id)
+        self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
+        self.assertEqual(575, self.book_1.price)
+
+    def test_update_put(self):
+        """Обновить цену"""
+        url = reverse('book-detail', args=(self.book_1.id,))
+        data = {
+            "name": self.book_1.name,
+            "price": 575,
+            "author_name": self.book_1.author_name,
+        }
+        json_data = json.dumps(data)  # переводим словарь в json
+        self.client.force_login(self.user)
+        response = self.client.put(url, data=json_data,
+                                   content_type='application/json')
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
+        self.assertEqual(575, self.book_1.price)
+
+    def test_update_put_not_owner(self):
+        """Не автор пытается обновить поля книги"""
+        self.user2 = User.objects.create(username='test_username2')
+        url = reverse('book-detail', args=(self.book_1.id,))
+        data = {
+            "name": self.book_1.name,
+            "price": 575,
+            "author_name": self.book_1.author_name,
+        }
+        json_data = json.dumps(data)  # переводим словарь в json
+        self.client.force_login(self.user2)
+        response = self.client.put(url, data=json_data,
+                                   content_type='application/json')
+
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        error = {'detail': ErrorDetail(
+            string='You do not have permission to perform this action.',
+            code='permission_denied')}
+        self.assertEqual(error, response.data)
+        self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
+        self.assertEqual(25, self.book_1.price)
+
+    def test_update_put_not_owner_but_staff(self):
+        """Не автор но Staff обновляет поля книги"""
+        self.staff_user = User.objects.create(username='test_staff_user',
+                                              is_staff=True)
+        url = reverse('book-detail', args=(self.book_1.id,))
+        data = {
+            "name": self.book_1.name,
+            "price": 575,
+            "author_name": self.book_1.author_name,
+        }
+        json_data = json.dumps(data)  # переводим словарь в json
+        self.client.force_login(self.staff_user)
+        response = self.client.put(url, data=json_data,
+                                   content_type='application/json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.book_1.refresh_from_db()  # замена Book.objects.get(id=self.book_1.id)
         self.assertEqual(575, self.book_1.price)
 
     def test_update_patch(self):
@@ -132,9 +192,22 @@ class BooksApiTestCase(APITestCase):
         self.assertEqual(3, Book.objects.all().count())
         url = reverse('book-detail', args=(self.book_1.id,))
         self.client.force_login(self.user)
-        response = self.client.delete(url,)
+        response = self.client.delete(url, )
 
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertEqual(2, Book.objects.all().count())
 
+    def test_delete_not_owner(self):
+        """Не автор пытается удалить книгу"""
+        self.assertEqual(3, Book.objects.all().count())
+        self.user2 = User.objects.create(username='test_username2')
+        url = reverse('book-detail', args=(self.book_1.id,))
+        self.client.force_login(self.user2)
+        response = self.client.delete(url)
 
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        error = {'detail': ErrorDetail(
+            string='You do not have permission to perform this action.',
+            code='permission_denied')}
+        self.assertEqual(error, response.data)
+        self.assertEqual(3, Book.objects.all().count())
