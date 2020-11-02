@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db.models import Count, Case, When, Avg
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
@@ -15,7 +16,7 @@ class BookViewSet(ModelViewSet):
     queryset = Book.objects.all().annotate(
             annotated_likes=Count(Case(When(userbookrelation__like=True, then=1))),
             rating=Avg('userbookrelation__rate')
-        ).order_by('id')
+        ).select_related('owner').order_by('id')
     permission_classes = [IsOwnerOrStaffOrReadOnly]
     serializer_class = BookSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
