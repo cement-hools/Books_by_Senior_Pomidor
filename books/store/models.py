@@ -38,6 +38,11 @@ class UserBookRelation(models.Model):
     def save(self, *args, **kwargs):  # вызывается при сохранении
         from store.logic import set_rating
 
+        creating = not self.pk
+        old_rating = self.rate
+
         super().save(*args,
                      **kwargs)  # делаем сохранение из родительского метода чтобы потом просто добавитьфункцию
-        set_rating(self.book)
+        new_rating = self.rate
+        if old_rating != new_rating or creating:
+            set_rating(self.book)
