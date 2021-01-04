@@ -34,3 +34,10 @@ class UserBookRelation(models.Model):
 
     def __str__(self):
         return f'{self.user.username}: {self.book.name}, RATE: {self.rate}'
+
+    def save(self, *args, **kwargs):  # вызывается при сохранении
+        from store.logic import set_rating
+
+        super().save(*args,
+                     **kwargs)  # делаем сохранение из родительского метода чтобы потом просто добавитьфункцию
+        set_rating(self.book)

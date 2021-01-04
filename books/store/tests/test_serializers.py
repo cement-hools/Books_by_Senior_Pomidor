@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.db.models import Count, Case, When, Avg
+from django.db.models import Count, Case, When
 from django.test import TestCase
 
 from store.models import Book, UserBookRelation
@@ -36,7 +36,7 @@ class BookSerializerTestCase(TestCase):
         books = Book.objects.all().annotate(
             annotated_likes=Count(
                 Case(When(userbookrelation__like=True, then=1))),
-            rating=Avg('userbookrelation__rate')
+            # rating=Avg('userbookrelation__rate')
         ).order_by('id')
         data = BookSerializer(books, many=True).data
         expected_data = [
