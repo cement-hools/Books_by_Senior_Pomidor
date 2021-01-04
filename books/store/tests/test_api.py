@@ -104,6 +104,7 @@ class BooksApiTestCase(APITestCase):
         self.assertEqual(3, Book.objects.all().count())
         data = {
             "name": "Python 3",
+
             "price": 150,
             "author_name": "Mark Summerfield",
         }
