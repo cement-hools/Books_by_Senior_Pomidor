@@ -10,6 +10,8 @@ class Book(models.Model):
                               related_name='my_books')
     readers = models.ManyToManyField(User, through='UserBookRelation',
                                      related_name='books')
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=None,
+                                 null=True)
 
     def __str__(self):
         return f'Id {self.id}: {self.name}'
