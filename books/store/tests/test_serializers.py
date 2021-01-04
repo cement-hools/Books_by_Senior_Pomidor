@@ -28,6 +28,7 @@ class BookSerializerTestCase(TestCase):
                                                       like=True, )
         user_book_3.rate = 4
         user_book_3.save()
+        print(user_book_3.rate)
 
         UserBookRelation.objects.create(user=user1, book=book_2, like=True,
                                         rate=3)
@@ -88,4 +89,7 @@ class BookSerializerTestCase(TestCase):
                 ]
             },
         ]
+        print()
+        print(expected_data[0])
+        print(data[0])
         self.assertEqual(expected_data, data)

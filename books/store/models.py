@@ -40,9 +40,13 @@ class UserBookRelation(models.Model):
 
         creating = not self.pk
         old_rating = self.rate
+        if not creating:
+            old_rating = UserBookRelation.objects.get(id=self.id).rate
 
         super().save(*args,
                      **kwargs)  # делаем сохранение из родительского метода чтобы потом просто добавитьфункцию
+
         new_rating = self.rate
+
         if old_rating != new_rating or creating:
             set_rating(self.book)
